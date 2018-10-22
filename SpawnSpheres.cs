@@ -22,14 +22,26 @@ public class SpawnSpheres : MonoBehaviour {
         boxCollider = GetComponent<BoxCollider>();
         boxMin = boxCollider.bounds.min;
         boxMax = boxCollider.bounds.max;
-
         for (int i = 0; i < sphereAmount; i++)
         {
             SetSpherePosition();
             GameObject spawnSphere = Instantiate(sphere, spawnPos, Quaternion.identity, transform);
             GameSphere gameSphere = spawnSphere.GetComponent<GameSphere>();
-            EventManager.instance.spheres.Add(gameSphere);            
+            EventManager.instance.spheres.Add(gameSphere);
+            if (i == 0)
+            {
+                gameSphere.sphereStats.PowerUpUI.PowerUp = PowerUp.speedUp;
+            }
+            if (i == 1)
+            {
+                gameSphere.sphereStats.PowerUpUI.PowerUp = PowerUp.shield;
+            }
+            if (i == 2)
+            {
+                gameSphere.sphereStats.PowerUpUI.PowerUp = PowerUp.reinforcements;
+            }
         }
+        
         boxCollider.enabled = false;
     }
 
