@@ -18,7 +18,7 @@ public class PowerUpUI
 {
     public delegate void PowerUpSetting();
     public PowerUpSetting OnPowerUpSet;
-
+    [SerializeField]
     private PowerUp powerUp;
     public PowerUp PowerUp
     {
@@ -34,10 +34,12 @@ public class PowerUpUI
     }
     public GameObject powerUpObject;
     public Image icon;
-    public Image timer;
+    public Image sphereClock;
 
     public delegate void PowerActivated(bool active);
     public PowerActivated OnPowerActivated;
+    [SerializeField]
+    private bool powerActive;
     public bool PowerActive
     {
         get
@@ -49,9 +51,7 @@ public class PowerUpUI
             powerActive = value;
             OnPowerActivated(value);
         }
-    }
-
-    private bool powerActive;
+    }    
 }
 
 
@@ -66,16 +66,5 @@ public class PowerUpPreset
 }
 
 public class PowerUps : MonoBehaviour {
-    /*
-    private float timer;
-
-    void Update()
-    {
-        if (true)
-        {
-
-        }
-    }
-
-    */
+   
 }

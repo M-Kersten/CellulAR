@@ -1,20 +1,23 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 using Random = UnityEngine.Random;
+using CellulAR;
 
+/// <summary>
+/// Class that spawns spheres of random level
+/// </summary>
 public class SpawnSpheres : MonoBehaviour {
 
     public int sphereAmount;
     public GameObject sphere;
-
-    private Collider boxCollider;
-    private Vector3 boxMin, boxMax;
     [SerializeField]
     private List<Vector3> spawnPositions;
 
+    private Collider boxCollider;
+    private Vector3 boxMin, boxMax;    
     private bool intersecting;
-
     private Vector3 spawnPos;
 
     void Start()
@@ -27,7 +30,6 @@ public class SpawnSpheres : MonoBehaviour {
             SetSpherePosition();
             GameObject spawnSphere = Instantiate(sphere, spawnPos, Quaternion.identity, transform);
             GameSphere gameSphere = spawnSphere.GetComponent<GameSphere>();
-            EventManager.instance.spheres.Add(gameSphere);
             if (i == 0)
             {
                 gameSphere.sphereStats.PowerUpUI.PowerUp = PowerUp.speedUp;
@@ -48,12 +50,12 @@ public class SpawnSpheres : MonoBehaviour {
     private void SetSpherePosition()
     {
         spawnPos = new Vector3(Random.Range(boxMin.x, boxMax.x), Random.Range(boxMin.y, boxMax.y), Random.Range(boxMin.z, boxMax.z));
-        for (int j = 0; j < EventManager.instance.spheres.Count; j++)
+        
+        // check if new spawnpoint is overlapping with another sphere
+        bool tooClose = ScoreManager.Instance.spheres.Any(item => Vector3.Distance(item.gameObject.transform.position, spawnPos) < 1);
+        if (tooClose)
         {
-            if (Vector3.Distance(EventManager.instance.spheres[j].gameObject.transform.position, spawnPos) < 1)
-            {
-                SetSpherePosition();
-            }
+            SetSpherePosition();
         }
     }
 

@@ -7,9 +7,12 @@ using System;
 public struct Page
 {
     public string pageName;
-    public GameObject[] pageComponents;
+    public List<GameObject> pageComponents;
 }
 
+/// <summary>
+/// Class for UI menus
+/// </summary>
 public class UIManager : MonoBehaviour {
 
     private static UIManager _instance;
@@ -33,16 +36,13 @@ public class UIManager : MonoBehaviour {
     public void OpenPage(int page)
     {
         ResetActiveMenus();
-        for (int i = 0; i < pages[page].pageComponents.Length; i++)
-        {
-            pages[page].pageComponents[i].SetActive(true);
-        }
+        pages[page].pageComponents.ForEach(item => item.SetActive(true));
     }
 
     public void OpenPage(string page)
     {
         ResetActiveMenus();
-        for (int i = 0; i < pages[i].pageComponents.Length; i++)
+        for (int i = 0; i < pages[i].pageComponents.Count; i++)
         {
             if (pages[i].pageName == page)
             {
@@ -53,13 +53,7 @@ public class UIManager : MonoBehaviour {
 
     public void ResetActiveMenus()
     {
-        for (int i = 0; i < pages.Count; i++)
-        {
-            for (int j = 0; j < pages[i].pageComponents.Length; j++)
-            {
-                pages[i].pageComponents[j].SetActive(false);
-            }
-        }
+        pages.ForEach(item => item.pageComponents.ForEach(subItem => subItem.SetActive(false)));
     }
 
 }
