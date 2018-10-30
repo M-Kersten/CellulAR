@@ -10,7 +10,8 @@ public enum PowerUp
     none,
     speedUp,
     shield,
-    reinforcements
+    reinforcements,
+    blind
 }
 
 [Serializable]

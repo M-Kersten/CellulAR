@@ -1,15 +1,16 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using CellulAR;
 
 public class MoveToTarget : MonoBehaviour
 {
-
     public float speed;
     public GameObject origin;
-    public GameSphere originSphere;
-    private SphereOwner originOwner;
+    public GameSphere originSphere;    
     public GameObject target;
+
+    private SphereOwner originOwner;
     private float timer;
     private TrailRenderer trail;
 
@@ -29,6 +30,9 @@ public class MoveToTarget : MonoBehaviour
 
     void Update()
     {
+        speed = SphereOwner.player == originOwner ? 
+            speed = SphereManager.Instance.playerParticleSpeed : 
+            speed = SphereManager.Instance.opponentParticleSpeed;
         float step = speed * Time.deltaTime;
         if (target != null)
         {
@@ -44,31 +48,35 @@ public class MoveToTarget : MonoBehaviour
         }
     }
 
-    public void SetOrigin(GameSphere _origin)
+    public void SetOrigin(GameSphere sphereOrigin)
     {
-        origin = _origin.gameObject;
-        originSphere = _origin;
+        this.origin = sphereOrigin.gameObject;
+        originSphere = sphereOrigin;
         originOwner = originSphere.sphereStats.SphereOwner;
         if (originOwner == SphereOwner.opponent)
         {
-            trail.colorGradient = EventManager.instance.player2Points;
+            trail.colorGradient = SphereManager.Instance.gameData.player2Points;
         }
         else
         {
-            trail.colorGradient = EventManager.instance.player1Points;
+            trail.colorGradient = SphereManager.Instance.gameData.player1Points;
         }
     }
 
-    public void SetTarget(GameObject _target)
+    public void SetTarget(GameObject setTarget)
     {
-        target = _target;
+        target = setTarget;
     }
 
     private void OnTriggerEnter(Collider collision)
     {
         if (origin != null)
         {
-            if (collision.gameObject == target)
+            if (collision.tag == "Shield" && originOwner == SphereOwner.opponent)
+            {
+                gameObject.SetActive(false);
+            }
+            else if (collision.gameObject == target)
             {
                 GameSphere sphere = collision.GetComponent<GameSphere>();
                 if (originOwner == SphereOwner.player)
@@ -86,8 +94,7 @@ public class MoveToTarget : MonoBehaviour
                             sphere.sphereStats.Points++;
                         }
                     }
-                }
-                
+                }                
                 else
                 {
                     if (originOwner == SphereOwner.opponent)

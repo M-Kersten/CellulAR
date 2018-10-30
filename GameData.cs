@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using CellulAR;
 
-[CreateAssetMenu(fileName = "GameData")]
+[CreateAssetMenu(fileName = "GameData", menuName = "Cellular/Game data", order = 1)]
 public class GameData : ScriptableObject
 {
     [Header("Colors")]

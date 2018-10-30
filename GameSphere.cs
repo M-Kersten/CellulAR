@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Reflection;
 using System.Linq;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
@@ -92,6 +93,7 @@ public class GameSphere : MonoBehaviour {
         
     public SphereStats sphereStats;
     public Text pointText;
+    public GameObject shield;
     private float timer;
     private float AITimer;
 
@@ -101,10 +103,32 @@ public class GameSphere : MonoBehaviour {
     public float AIMoveMinSeconds, AIMoveMaxSeconds;
 
     private Material mat;
-    
+
+    private static GameSphere copyingFrom;
+    private static FieldInfo[] fields;
+
+    [ContextMenu("Copy values")]
+    public void CopyWithReflection()
+    {
+        copyingFrom = this;
+        Type sphereType = typeof(GameSphere);
+        FieldInfo[] sphereFields = sphereType.GetFields(BindingFlags.Public | BindingFlags.Instance);
+        fields = sphereFields;
+    }
+
+    [ContextMenu("Paste values")]
+    public void PasteWithReflection()
+    {
+        foreach (FieldInfo field in fields)
+        {
+            object value = field.GetValue(copyingFrom);
+            field.SetValue(this, value);
+        }
+    }
+
     void Awake()
     {
-        ScoreManager.Instance.spheres.Add(this);
+        SphereManager.Instance.spheres.Add(this);
         mat = GetComponent<Renderer>().material;
         ChangePointDisplay(sphereStats.Points);
         firstWinCheck = true;
@@ -122,12 +146,13 @@ public class GameSphere : MonoBehaviour {
 
         sphereStats.PowerUpUI.OnPowerUpSet += SetPowerUpIcon;
         sphereStats.PowerUpUI.OnPowerActivated += SetPowerActive;
+        SetPowerUpIcon();
 
         DisablePowerUps();
-        mat.color = ScoreManager.sphereColors[sphereStats.SphereOwner];
+        mat.color = SphereManager.sphereColors[sphereStats.SphereOwner];
         ChangeColor(sphereStats.SphereOwner);
         ChangeScaleToPoints(sphereStats.Points);
-        sphereStats.SecondPerPointgain = ScoreManager.Instance.gameData.secondPerPoint;
+        sphereStats.SecondPerPointgain = SphereManager.Instance.gameData.secondPerPoint;
         AITimer = 5;
     }
 
@@ -164,7 +189,7 @@ public class GameSphere : MonoBehaviour {
             }
             else
             {
-                ScoreManager.Instance.TransferPoints(this, ScoreManager.Instance.spheres[Random.Range(0, ScoreManager.Instance.spheres.Count)]);
+                SphereManager.Instance.TransferPoints(this, SphereManager.Instance.spheres[Random.Range(0, SphereManager.Instance.spheres.Count)]);
                 AITimer = Random.Range(AIMoveMinSeconds, AIMoveMaxSeconds);
             }
         }
@@ -174,22 +199,21 @@ public class GameSphere : MonoBehaviour {
     {
         if (sphereStats.PowerUpUI.sphereClock.fillAmount < 1)
         {
-            sphereStats.PowerUpUI.sphereClock.fillAmount += Time.deltaTime * ScoreManager.Instance.powerUpGainSpeed;
+            sphereStats.PowerUpUI.sphereClock.fillAmount += Time.deltaTime * SphereManager.Instance.powerUpGainSpeed;
             if (sphereStats.SphereOwner == SphereOwner.player)
             {
-                for (int i = 0; i < ScoreManager.Instance.powerUpPresets.Count; i++)
-                {
-                    if (ScoreManager.Instance.powerUpPresets[i].powerUp == sphereStats.PowerUpUI.PowerUp)
-                    {
-                        ScoreManager.Instance.powerUpPresets[i].buttonFill.fillAmount += Time.deltaTime * ScoreManager.Instance.powerUpGainSpeed;
-                    }
-                }
+                PowerUpPreset preset = SphereManager.Instance.powerUpPresets.Where(item => item.powerUp == sphereStats.PowerUpUI.PowerUp)
+                    .FirstOrDefault();
+                preset.buttonFill.fillAmount += Time.deltaTime * SphereManager.Instance.powerUpGainSpeed;
             }
         }
         else if (!sphereStats.PowerUpUI.PowerActive && sphereStats.SphereOwner == SphereOwner.player)
         {
-            Debug.Log("setting powerup button active");
             sphereStats.PowerUpUI.PowerActive = true;
+            PowerUpPreset preset = SphereManager.Instance.powerUpPresets.Where(item => item.powerUp == sphereStats.PowerUpUI.PowerUp)
+                    .FirstOrDefault();
+            preset.buttonFill.color = Color.blue;
+            Debug.Log("preset button is: " + preset.buttonFill.gameObject.name);
         }
     }
 
@@ -205,7 +229,7 @@ public class GameSphere : MonoBehaviour {
 
     public void ChangeColor(SphereOwner owner)
     {
-        Color tempColor = ScoreManager.sphereColors[owner];
+        Color tempColor = SphereManager.sphereColors[owner];
         mat.color = tempColor;
     }
 
@@ -240,7 +264,7 @@ public class GameSphere : MonoBehaviour {
     {
         bool won = true;
         // check if opponent has any spheres left
-        won = !ScoreManager.Instance.spheres.Any(item => item.sphereStats.SphereOwner == SphereOwner.opponent);
+        won = !SphereManager.Instance.spheres.Any(item => item.sphereStats.SphereOwner == SphereOwner.opponent);
         if (firstWinCheck)
         {
             firstWinCheck = false;
@@ -248,7 +272,7 @@ public class GameSphere : MonoBehaviour {
         }
         if (won)
         {
-            ScoreManager.Instance.GameWon();
+            SphereManager.Instance.GameWon();
         }
     }
 
@@ -259,57 +283,61 @@ public class GameSphere : MonoBehaviour {
             string msg = sphereStats.Selected ? "Unselecting: " + gameObject.name : "Selecting: " + gameObject.name;
             Debug.Log(msg);
 
-            if (sphereStats.Selected == true && ScoreManager.Instance.selectedSpheres.Count > 0)
+            if (SphereManager.Instance.ActivePowerUp == PowerUp.shield)
             {
-                foreach (GameSphere sphere in ScoreManager.Instance.selectedSpheres)
-                {
-                    ScoreManager.Instance.TransferPoints(sphere, this);
-                }                 
-                ScoreManager.Instance.UnSelectAllSpheres();
+                ActivatePowerUp();
             }
             else
             {
-                sphereStats.Selected = !sphereStats.Selected;
-                if (sphereStats.Selected)
+                if (sphereStats.Selected == true && SphereManager.Instance.selectedSpheres.Count > 0)
                 {
-                    ScoreManager.Instance.selectedSpheres.Add(this);
+                    SphereManager.Instance.selectedSpheres.ForEach(item => SphereManager.Instance.TransferPoints(item, this));
+                    SphereManager.Instance.UnSelectAllSpheres();
                 }
                 else
                 {
-                    ScoreManager.Instance.DeleteSelectedSphere(this);
+                    sphereStats.Selected = !sphereStats.Selected;
+                    if (sphereStats.Selected)
+                    {
+                        SphereManager.Instance.selectedSpheres.Add(this);
+                    }
+                    else
+                    {
+                        SphereManager.Instance.DeleteSelectedSphere(this);
+                    }
                 }
             }
         }
         else
         {
-            if (!ScoreManager.Instance.playerSet)
+            if (!SphereManager.Instance.playerSet)
             {
-                ScoreManager.Instance.playerSet = true;
+                SphereManager.Instance.playerSet = true;
                 sphereStats.SphereOwner = SphereOwner.player;
-                sphereStats.Points = ScoreManager.Instance.gameData.startingPoints;
-                ScoreManager.Instance.SetOpponent();
+                sphereStats.Points = SphereManager.Instance.gameData.startingPoints;
+                SphereManager.Instance.SetOpponent();
             }
             else
             {      
-                foreach (GameSphere sphere in ScoreManager.Instance.selectedSpheres)
+                foreach (GameSphere sphere in SphereManager.Instance.selectedSpheres)
                 {
-                    ScoreManager.Instance.TransferPoints(sphere, this);
+                    SphereManager.Instance.TransferPoints(sphere, this);
                 }
-                ScoreManager.Instance.UnSelectAllSpheres();
+                SphereManager.Instance.UnSelectAllSpheres();
             }            
         }
     }
 
     public void ChangePointCounter(int points)
     {
-        ScoreManager.Instance.DisplayScores(points);
+        SphereManager.Instance.DisplayScores(points);
     }
 
     public void SetPowerUpIcon()
     {
         if (sphereStats.PowerUpUI.PowerUp != PowerUp.none)
         {
-            ScoreManager.Instance.powerUpPresets.Where(item => item.powerUp == sphereStats.PowerUpUI.PowerUp)
+            SphereManager.Instance.powerUpPresets.Where(item => item.powerUp == sphereStats.PowerUpUI.PowerUp)
                 .Where(item => sphereStats.PowerUpUI.icon.sprite = item.icon)
                 .FirstOrDefault();
             sphereStats.PowerUpUI.powerUpObject.SetActive(true);
@@ -318,20 +346,42 @@ public class GameSphere : MonoBehaviour {
 
     private void DisablePowerUps()
     {
-        for (int i = 0; i < ScoreManager.Instance.powerUpPresets.Count; i++)
+        for (int i = 0; i < SphereManager.Instance.powerUpPresets.Count; i++)
         {
-            ScoreManager.Instance.powerUpPresets[i].button.interactable = false;            
+            SphereManager.Instance.powerUpPresets[i].button.interactable = false;            
         }
     }
 
     private void SetPowerActive(bool active)
     {
-        for (int i = 0; i < ScoreManager.Instance.powerUpPresets.Count; i++)
+        PowerUpPreset powerUpPreset = SphereManager.Instance.powerUpPresets.Where(item => item.powerUp == sphereStats.PowerUpUI.PowerUp)
+            .FirstOrDefault();
+        powerUpPreset.button.interactable = active;        
+    }
+
+    private void ActivatePowerUp()
+    {
+        switch (SphereManager.Instance.ActivePowerUp)
         {
-            if (ScoreManager.Instance.powerUpPresets[i].powerUp == sphereStats.PowerUpUI.PowerUp)
-            {
-                ScoreManager.Instance.powerUpPresets[i].button.interactable = active;
-            }
+            case PowerUp.none:
+                break;
+            case PowerUp.speedUp:
+                break;
+            case PowerUp.shield:
+                shield.SetActive(true);
+                break;
+            case PowerUp.reinforcements:
+                break;
+            case PowerUp.blind:
+                break;
+            default:
+                break;
         }
+        SphereManager.Instance.UnSelectAllSpheres();
+        if (SphereManager.Instance.ActivePowerUp == PowerUp.shield)
+        {
+            SphereManager.Instance.ActivePowerUp = PowerUp.none;
+        }
+        
     }
 }

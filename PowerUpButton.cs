@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using CellulAR;
@@ -14,6 +12,7 @@ public class PowerUpButton : MonoBehaviour
  
     void Awake()
     {
+        SphereManager.Instance.OnActivated += ResetAfterUse;
         button = GetComponent<Button>();
         button.onClick.AddListener(() => ActivatePowerUp());
     }
@@ -25,11 +24,35 @@ public class PowerUpButton : MonoBehaviour
 
     private void ActivatePowerUp()
     {
-        PowerUpPreset POPreset = ScoreManager.Instance.powerUpPresets.Where(item => item.button == button)
-            .FirstOrDefault();
+        buttonClock.color = Color.green;
+        SphereManager.Instance.UnSelectAllSpheres();
+        switch (powerUp)
+        {
+            case PowerUp.none:
+                break;
+            case PowerUp.speedUp:
+                // speedup powerup hier toevoegen
+                SphereManager.Instance.SpeedUp(5);
+                SphereManager.Instance.ActivePowerUp = PowerUp.speedUp;
+                break;
+            case PowerUp.shield:
+                SphereManager.Instance.ActivePowerUp = PowerUp.shield;
+                break;
+            case PowerUp.blind:                
+                SphereManager.Instance.ActivePowerUp = PowerUp.blind;
+                SphereManager.Instance.BlindOpponent();
+                break;
+        }
+    }
+
+    public void ResetPowerUp()
+    {
+        buttonClock.color = Color.white;
+        PowerUpPreset POPreset = SphereManager.Instance.powerUpPresets.Where(item => item.button == button)
+                    .FirstOrDefault();
         ResetButton(POPreset);
 
-        GameSphere SphereReset = ScoreManager.Instance.spheres.Where(item => item.sphereStats.PowerUpUI.PowerUp == powerUp)
+        GameSphere SphereReset = SphereManager.Instance.spheres.Where(item => item.sphereStats.PowerUpUI.PowerUp == powerUp)
             .FirstOrDefault();
         ResetSphere(SphereReset);
     }
@@ -45,6 +68,16 @@ public class PowerUpButton : MonoBehaviour
     {
         resetSphere.sphereStats.PowerUpUI.sphereClock.fillAmount = 0;
         resetSphere.sphereStats.PowerUpUI.PowerActive = false;
+    }
+
+    private void ResetAfterUse(PowerUp localPowerUp)
+    {
+        Debug.Log("checking if powerup is activepowerup");
+        if (localPowerUp == powerUp)
+        {
+            Debug.Log("resetting powerup");
+            ResetPowerUp();
+        }
     }
 
 }
